@@ -104,6 +104,14 @@ type Constraint struct {
 	Description  string
 }
 
+// Status type
+type Status struct {
+	State               string
+	LastUpdateTimestamp *time.Time
+	ReasonCode          string
+	ReasonDescription   string
+}
+
 // AuthorizationDetails type
 type AuthorizationDetails struct {
 	AmazonAuthorizationID    string `xml:"AmazonAuthorizationId"`
@@ -115,12 +123,34 @@ type AuthorizationDetails struct {
 	IDList                   []string `xml:"IdList"`
 	CreationTimestamp        *time.Time
 	ExpirationTimestamp      *time.Time
-	AuthorizationStatus      struct {
-		State               string
-		LastUpdateTimestamp *time.Time
-		ReasonCode          string
-		ReasonDescription   string
-	}
-	SoftDecline bool
-	CaptureNow  bool
+	AuthorizationStatus      Status
+	SoftDecline              bool
+	CaptureNow               bool
+}
+
+// RefundDetails type
+type RefundDetails struct {
+	AmazonRefundID    string `xml:"AmazonRefundId"`
+	RefundReferenceID string `xml:"RefundReferenceId"`
+	SellerRefundNote  string
+	RefundType        string
+	RefundAmount      Price
+	FeeRefunded       Price
+	CreationTimestamp *time.Time
+	RefundStatus      Status
+	SoftDescriptor    string
+}
+
+// CaptureDetails type
+type CaptureDetails struct {
+	AmazonCaptureID    string `xml:"AmazonCaptureId"`
+	CaptureReferenceID string `xml:"CaptureReferenceId"`
+	SellerCaptureNote  string
+	CaptureAmount      Price
+	RefundAmount       Price
+	CaptureFee         Price
+	IDList             []string `xml:"IdList"`
+	CreationTimestamp  *time.Time
+	CaptureStatus      Status
+	SoftDescriptor     string
 }

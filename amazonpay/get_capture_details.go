@@ -21,7 +21,7 @@ func (c *Client) GetCaptureDetails(ctx context.Context, req *GetCaptureDetailsRe
 
 // GetCaptureDetailsRequest type
 type GetCaptureDetailsRequest struct {
-	AmazonRefundID string `form:"AmazonRefundId"`
+	AmazonCaptureID string `form:"AmazonCaptureId"`
 }
 
 // GetCaptureDetailsResponse type

@@ -29,8 +29,14 @@ type AuthorizeOnBillingAgreementRequest struct {
 	AmazonBillingAgreementID string `form:"AmazonBillingAgreementId"`
 	AuthorizationReferenceID string `form:"AuthorizationReferenceId"`
 	AuthorizationAmount      Price
+	SellerAuthorizationNote  string
+	TransactionTimeout       uint
 	CaptureNow               bool
+	SoftDescriptor           string
+	SellerNote               string
 	PlatformID               string
+	SellerOrderAttributes    SellerOrderAttributes
+	InheritShippingAddress   bool
 }
 
 // AuthorizeOnBillingAgreementResponse type

@@ -170,16 +170,16 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*htt
 			}
 			switch {
 			case resp.StatusCode == http.StatusOK:
-				if err := xml.Unmarshal([]byte(data), v); err != nil {
+				if err := xml.Unmarshal(data, v); err != nil {
 					return nil, err
 				}
 			default:
-				var apiError APIError
-				if err := xml.Unmarshal([]byte(data), &apiError); err == nil {
-					return nil, apiError
+				var responseErr ResponseError
+				if err := xml.Unmarshal(data, &responseErr); err == nil {
+					return nil, responseErr
 				}
 			}
 		}
 	}
-	return resp, err
+	return resp, nil
 }

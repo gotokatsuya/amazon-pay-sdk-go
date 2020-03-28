@@ -25,68 +25,49 @@ func main() {
 		panic(err)
 	}
 
-	http.HandleFunc("/api/payment/details", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api/payment/buy", func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		amazonBillingAgreementID := r.PostFormValue("amazonBillingAgreementId")
-		_, _, err := amazonpayCli.SetBillingAgreementDetails(ctx, &amazonpay.SetBillingAgreementDetailsRequest{
+		if _, _, err := amazonpayCli.SetBillingAgreementDetails(ctx, &amazonpay.SetBillingAgreementDetailsRequest{
 			AmazonBillingAgreementID: amazonBillingAgreementID,
 			BillingAgreementAttributes: amazonpay.BillingAgreementAttributes{
-				PlatformID: sellerID,
+				SellerNote: "定期購入",
 			},
-		})
-		if err != nil {
+		}); err != nil {
+			log.Printf("SetBillingAgreementDetails: %v\n", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		detailsResp, _, err := amazonpayCli.GetBillingAgreementDetails(ctx, &amazonpay.GetBillingAgreementDetailsRequest{
+		if _, _, err := amazonpayCli.ConfirmBillingAgreement(ctx, &amazonpay.ConfirmBillingAgreementRequest{
 			AmazonBillingAgreementID: amazonBillingAgreementID,
-		})
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		if err := json.NewEncoder(w).Encode(detailsResp); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-	})
-
-	http.HandleFunc("/api/payment/confirm", func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		amazonBillingAgreementID := r.PostFormValue("amazonBillingAgreementId")
-		_, _, err := amazonpayCli.ConfirmBillingAgreement(ctx, &amazonpay.ConfirmBillingAgreementRequest{
-			AmazonBillingAgreementID: amazonBillingAgreementID,
-		})
-		if err != nil {
+		}); err != nil {
+			log.Printf("ConfirmBillingAgreement: %v\n", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		authorizationReferenceID := xid.New().String()
-		_, _, err = amazonpayCli.AuthorizeOnBillingAgreement(ctx, &amazonpay.AuthorizeOnBillingAgreementRequest{
+		authorizeResp, _, err := amazonpayCli.AuthorizeOnBillingAgreement(ctx, &amazonpay.AuthorizeOnBillingAgreementRequest{
 			AmazonBillingAgreementID: amazonBillingAgreementID,
 			AuthorizationReferenceID: authorizationReferenceID,
 			AuthorizationAmount: amazonpay.Price{
-				Amount:       "1.99",
+				Amount:       "10.00",
 				CurrencyCode: "JPY",
 			},
-			CaptureNow: true,
-			PlatformID: sellerID,
+			TransactionTimeout: 0,
+			CaptureNow:         true,
 		})
 		if err != nil {
+			log.Printf("AuthorizeOnBillingAgreement: %v\n", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		detailsResp, _, err := amazonpayCli.GetBillingAgreementDetails(ctx, &amazonpay.GetBillingAgreementDetailsRequest{
-			AmazonBillingAgreementID: amazonBillingAgreementID,
-		})
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+		amazonCaptureIDs := authorizeResp.AuthorizeOnBillingAgreementResult.AuthorizationDetails.IDList
+		log.Printf("AuthorizeOnBillingAgreement.amazonCaptureIDs: %v\n", amazonCaptureIDs)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		if err := json.NewEncoder(w).Encode(detailsResp); err != nil {
+		if err := json.NewEncoder(w).Encode(&struct {
+			OK bool
+		}{OK: true}); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	})

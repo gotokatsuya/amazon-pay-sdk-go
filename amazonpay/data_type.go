@@ -5,15 +5,15 @@ import (
 	"time"
 )
 
-type APIError struct {
+type ResponseError struct {
 	XMLName xml.Name `xml:"ErrorResponse"`
 	Type    string   `xml:"Error>Type"`
 	Code    string   `xml:"Error>Code"`
 	Message string   `xml:"Error>Message"`
 }
 
-func (apiError APIError) Error() string {
-	return apiError.Message
+func (re ResponseError) Error() string {
+	return re.Message
 }
 
 // ResponseMetadata type
@@ -23,11 +23,11 @@ type ResponseMetadata struct {
 
 // BillingAgreementDetails type
 type BillingAgreementDetails struct {
-	AmazonBillingAgreementID         string `xml:"AmazonBillingAgreementId"`
+	AmazonBillingAgreementID         string `form:"AmazonBillingAgreementId" xml:"AmazonBillingAgreementId"`
 	BillingAgreementLimits           BillingAgreementLimits
 	Buyer                            Buyer
 	SellerNote                       string
-	PlatformID                       string `xml:"PlatformId"`
+	PlatformID                       string `form:"PlatformId" xml:"PlatformId"`
 	Destination                      Destination
 	ReleaseEnvironment               string
 	SellerBillingAgreementAttributes SellerBillingAgreementAttributes
@@ -52,7 +52,7 @@ type BillingAgreementLimits struct {
 
 // SellerBillingAgreementAttributes type
 type SellerBillingAgreementAttributes struct {
-	SellerBillingAgreementID string `form:",omitempty" xml:"SellerBillingAgreementId"`
+	SellerBillingAgreementID string `form:"SellerBillingAgreementId,omitempty" xml:"SellerBillingAgreementId"`
 	StoreName                string `form:",omitempty"`
 	CustomInformation        string `form:",omitempty"`
 }
@@ -67,7 +67,7 @@ type BillingAgreementStatus struct {
 
 // BillingAgreementAttributes type
 type BillingAgreementAttributes struct {
-	PlatformID                       string `form:"PlatformId" xml:"PlatformId"`
+	PlatformID                       string `form:"PlatformId,omitempty" xml:"PlatformId"`
 	SellerNote                       string `form:",omitempty"`
 	SellerBillingAgreementAttributes SellerBillingAgreementAttributes
 }
@@ -100,7 +100,7 @@ type Address struct {
 
 // Constraint type
 type Constraint struct {
-	ConstraintID string `xml:"ConstraintId"`
+	ConstraintID string `form:"ConstraintId" xml:"ConstraintId"`
 	Description  string
 }
 
@@ -114,24 +114,26 @@ type Status struct {
 
 // AuthorizationDetails type
 type AuthorizationDetails struct {
-	AmazonAuthorizationID    string `xml:"AmazonAuthorizationId"`
-	AuthorizationReferenceID string `xml:"AuthorizationReferenceId"`
+	AmazonAuthorizationID    string `form:"AmazonAuthorizationId" xml:"AmazonAuthorizationId"`
+	AuthorizationReferenceID string `form:"AuthorizationReferenceId" xml:"AuthorizationReferenceId"`
 	SellerAuthorizationNote  string
 	AuthorizationAmount      Price
 	CaptureAmount            Price
 	AuthorizationFee         Price
-	IDList                   []string `xml:"IdList"`
-	CreationTimestamp        *time.Time
-	ExpirationTimestamp      *time.Time
-	AuthorizationStatus      Status
-	SoftDecline              bool
-	CaptureNow               bool
+	IDList                   struct {
+		Member []string `form:"member" xml:"member"`
+	} `form:"IdList" xml:"IdList"`
+	CreationTimestamp   *time.Time
+	ExpirationTimestamp *time.Time
+	AuthorizationStatus Status
+	SoftDecline         bool
+	CaptureNow          bool
 }
 
 // RefundDetails type
 type RefundDetails struct {
-	AmazonRefundID    string `xml:"AmazonRefundId"`
-	RefundReferenceID string `xml:"RefundReferenceId"`
+	AmazonRefundID    string `form:"AmazonRefundId" xml:"AmazonRefundId"`
+	RefundReferenceID string `form:"RefundReferenceId" xml:"RefundReferenceId"`
 	SellerRefundNote  string
 	RefundType        string
 	RefundAmount      Price
@@ -143,14 +145,23 @@ type RefundDetails struct {
 
 // CaptureDetails type
 type CaptureDetails struct {
-	AmazonCaptureID    string `xml:"AmazonCaptureId"`
-	CaptureReferenceID string `xml:"CaptureReferenceId"`
+	AmazonCaptureID    string `form:"AmazonCaptureId" xml:"AmazonCaptureId"`
+	CaptureReferenceID string `form:"CaptureReferenceId" xml:"CaptureReferenceId"`
 	SellerCaptureNote  string
 	CaptureAmount      Price
 	RefundAmount       Price
 	CaptureFee         Price
-	IDList             []string `xml:"IdList"`
-	CreationTimestamp  *time.Time
-	CaptureStatus      Status
-	SoftDescriptor     string
+	IDList             struct {
+		Member []string `form:"member" xml:"member"`
+	} `form:"IdList" xml:"IdList"`
+	CreationTimestamp *time.Time
+	CaptureStatus     Status
+	SoftDescriptor    string
+}
+
+// SellerOrderAttributes type
+type SellerOrderAttributes struct {
+	SellerOrderID     string `form:"SellerOrderId" xml:"SellerOrderId"`
+	StoreName         string
+	CustomInformation string
 }

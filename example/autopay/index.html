@@ -5,12 +5,12 @@
     <div id="AmazonPayButton"></div>
     <div id="walletWidgetDiv" style="height: 250px;"></div>
     <div id="consentWidgetDiv" style="height: 100px;"></div>
-    <div id="confirmForm" style="display: none;">
+    <div id="buyForm" style="display: none;">
       <input type="hidden" id="amazonBillingAgreementId" name="amazonBillingAgreementId" value="" />
-      <button onclick="postPaymentConfirm()">Confirm</button>
+      <button onclick="postPaymentBuy()">購入する</button>
     </div>
-    <div id="confirmComplete" style="display: none;">
-      Confirm Complete!
+    <div id="buyComplete" style="display: none;">
+      購入が完了しました。
     </div>
   </div>
 
@@ -72,31 +72,18 @@
 
     function showConsentWidget(billingAgreement) {
       var amazonBillingAgreementId = billingAgreement.getAmazonBillingAgreementId();
+      document.getElementById("amazonBillingAgreementId").value = amazonBillingAgreementId;
       // Consent
       new OffAmazonPayments.Widgets.Consent({
         sellerId: "{{ .AmazonPaySellerID }}",
         amazonBillingAgreementId: amazonBillingAgreementId,
         onReady: function (billingAgreementConsentStatus) {
           var consentStatus = billingAgreementConsentStatus.getConsentStatus();
-          console.log(consentStatus);
-          document.getElementById("amazonBillingAgreementId").value = amazonBillingAgreementId;
-          if (consentStatus == 'true') {
-            document.getElementById("confirmForm").style.display = "block";
-          } else {
-            document.getElementById("confirmForm").style.display = "none";
-          }
-          postPaymentDetails(amazonBillingAgreementId);
+          toggleBuyButton(consentStatus == 'true');
         },
         onConsent: function (billingAgreementConsentStatus) {
           var consentStatus = billingAgreementConsentStatus.getConsentStatus();
-          console.log(consentStatus);
-          document.getElementById("amazonBillingAgreementId").value = amazonBillingAgreementId;
-          if (consentStatus == 'true') {
-            document.getElementById("confirmForm").style.display = "block";
-          } else {
-            document.getElementById("confirmForm").style.display = "none";
-          }
-          postPaymentDetails(amazonBillingAgreementId);
+          toggleBuyButton(consentStatus == 'true');
         },
         design: {
           designMode: 'responsive'
@@ -110,28 +97,24 @@
       }).bind("consentWidgetDiv");
     }
 
-    function postPaymentDetails(billingAgreementId) {
-      var xhr = new XMLHttpRequest();
-      xhr.open('POST', '/api/payment/details');
-      xhr.setRequestHeader('content-type', 'application/x-www-form-urlencoded;charset=UTF-8');
-      xhr.send(`amazonBillingAgreementId=${billingAgreementId}`);
-      xhr.onreadystatechange = function () {
-        if (xhr.readyState === 4 && xhr.status === 200) {
-          console.log(xhr.responseText);
-        }
-      };
+    function toggleBuyButton(consentStatus) {
+      if (consentStatus) {
+        document.getElementById("buyForm").style.display = "block";
+      } else {
+        document.getElementById("buyForm").style.display = "none";
+      }
     }
 
-    function postPaymentConfirm() {
+    function postPaymentBuy() {
       var billingAgreementId = document.getElementById("amazonBillingAgreementId").value;
       var xhr = new XMLHttpRequest();
-      xhr.open('POST', '/api/payment/confirm');
+      xhr.open('POST', '/api/payment/buy');
       xhr.setRequestHeader('content-type', 'application/x-www-form-urlencoded;charset=UTF-8');
       xhr.send(`amazonBillingAgreementId=${billingAgreementId}`);
       xhr.onreadystatechange = function () {
         if (xhr.readyState === 4 && xhr.status === 200) {
           console.log(xhr.responseText);
-          document.getElementById("confirmComplete").style.display = "block";
+          document.getElementById("buyComplete").style.display = "block";
         }
       };
     }

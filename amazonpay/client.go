@@ -38,7 +38,6 @@ type Client struct {
 	SellerID         string
 	SignatureMethod  string
 	SignatureVersion string
-	Timestamp        string
 	Version          string
 	EndpointHost     string
 	EndpointPath     string
@@ -67,7 +66,6 @@ func New(accessKey, secretKey, sellerID string, options ...ClientOption) (*Clien
 		SellerID:         sellerID,
 		SignatureMethod:  "HmacSHA256",
 		SignatureVersion: "2",
-		Timestamp:        time.Now().UTC().Format("2006-01-02T15:04:05Z"),
 		Version:          Version,
 		EndpointHost:     EndpointHostJP,
 		EndpointPath:     EndpointPathReal,
@@ -129,7 +127,7 @@ func (c *Client) NewRequest(action string, body interface{}) (*http.Request, err
 	data.Set("SellerId", c.SellerID)
 	data.Set("SignatureMethod", c.SignatureMethod)
 	data.Set("SignatureVersion", c.SignatureVersion)
-	data.Set("Timestamp", c.Timestamp)
+	data.Set("Timestamp", time.Now().UTC().Format("2006-01-02T15:04:05Z"))
 	data.Set("Version", c.Version)
 	data.Set("Signature", c.makeSignature(http.MethodPost, data.RawEncode()))
 	req, err := http.NewRequest(http.MethodPost, c.endpoint.String(), strings.NewReader(data.RawEncode()))

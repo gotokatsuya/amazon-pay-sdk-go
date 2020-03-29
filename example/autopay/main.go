@@ -31,7 +31,7 @@ func main() {
 		if _, _, err := amazonpayCli.SetBillingAgreementDetails(ctx, &amazonpay.SetBillingAgreementDetailsRequest{
 			AmazonBillingAgreementID: amazonBillingAgreementID,
 			BillingAgreementAttributes: amazonpay.BillingAgreementAttributes{
-				SellerNote: "定期購入",
+				SellerNote: "有料 12ヶ月プラン",
 			},
 		}); err != nil {
 			log.Printf("SetBillingAgreementDetails: %v\n", err)
@@ -53,8 +53,9 @@ func main() {
 				Amount:       "10.00",
 				CurrencyCode: "JPY",
 			},
-			TransactionTimeout: 0,
-			CaptureNow:         true,
+			SellerAuthorizationNote: "有料 12ヶ月プラン",
+			TransactionTimeout:      0,
+			CaptureNow:              true,
 		})
 		if err != nil {
 			log.Printf("AuthorizeOnBillingAgreement: %v\n", err)

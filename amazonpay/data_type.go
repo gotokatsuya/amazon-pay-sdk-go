@@ -161,7 +161,7 @@ type CaptureDetails struct {
 
 // SellerOrderAttributes type
 type SellerOrderAttributes struct {
-	SellerOrderID     string `form:"SellerOrderId" xml:"SellerOrderId"`
-	StoreName         string
-	CustomInformation string
+	SellerOrderID     string `form:"SellerOrderId,omitempty" xml:"SellerOrderId"`
+	StoreName         string `form:",omitempty"`
+	CustomInformation string `form:",omitempty"`
 }

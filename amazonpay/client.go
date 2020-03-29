@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"sort"
 	"strings"
 	"time"
 
@@ -118,10 +119,11 @@ func WithSandbox() ClientOption {
 
 // NewRequest method
 func (c *Client) NewRequest(action string, body interface{}) (*http.Request, error) {
-	data, err := form.NewEncoder().Encode(body)
+	values, err := form.NewEncoder().Encode(body)
 	if err != nil {
 		return nil, err
 	}
+	data := NewRequestValues(values)
 	data.Set("AWSAccessKeyId", c.AccessKey)
 	data.Set("Action", action)
 	data.Set("SellerId", c.SellerID)
@@ -129,8 +131,8 @@ func (c *Client) NewRequest(action string, body interface{}) (*http.Request, err
 	data.Set("SignatureVersion", c.SignatureVersion)
 	data.Set("Timestamp", c.Timestamp)
 	data.Set("Version", c.Version)
-	data.Set("Signature", c.makeSignature(http.MethodPost, data))
-	req, err := http.NewRequest(http.MethodPost, c.endpoint.String(), strings.NewReader(data.Encode()))
+	data.Set("Signature", c.makeSignature(http.MethodPost, data.RawEncode()))
+	req, err := http.NewRequest(http.MethodPost, c.endpoint.String(), strings.NewReader(data.RawEncode()))
 	if err != nil {
 		return nil, err
 	}
@@ -139,10 +141,10 @@ func (c *Client) NewRequest(action string, body interface{}) (*http.Request, err
 }
 
 // https://m.media-amazon.com/images/G/09/AmazonPayments/Signature.pdf
-func (c *Client) makeSignature(method string, data url.Values) string {
+func (c *Client) makeSignature(method string, requestValues string) string {
 	key := []byte(c.SecretKey)
 	h := hmac.New(sha256.New, key)
-	h.Write([]byte(strings.Join([]string{method, c.EndpointHost, c.EndpointPath + "/" + c.Version, data.Encode()}, "\n")))
+	h.Write([]byte(strings.Join([]string{method, c.EndpointHost, c.EndpointPath + "/" + c.Version, requestValues}, "\n")))
 	return base64.StdEncoding.EncodeToString(h.Sum(nil))
 }
 
@@ -182,4 +184,35 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*htt
 		}
 	}
 	return resp, nil
+}
+
+// -- request values encoder --
+
+type requestValues struct {
+	url.Values
+}
+
+func NewRequestValues(v url.Values) requestValues {
+	return requestValues{v}
+}
+
+func (v requestValues) RawEncode() string {
+	var buf strings.Builder
+	keys := make([]string, 0, len(v.Values))
+	for k := range v.Values {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		vs := v.Values[k]
+		for _, v := range vs {
+			if buf.Len() > 0 {
+				buf.WriteByte('&')
+			}
+			buf.WriteString(k)
+			buf.WriteByte('=')
+			buf.WriteString(strings.Replace(url.QueryEscape(v), "+", "%20", -1))
+		}
+	}
+	return buf.String()
 }

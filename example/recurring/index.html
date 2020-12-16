@@ -1,0 +1,27 @@
+<html>
+
+<body>
+  <div id="AmazonPayButton"></div>
+  <script src="https://static-fe.payments-amazon.com/checkout.js"></script>
+  <script type="text/javascript" charset="utf-8">
+    amazon.Pay.renderButton('#AmazonPayButton', {
+      // set checkout environment
+      merchantId: '{{ .AmazonPayMerchantID }}',
+      ledgerCurrency: 'JPY',
+      sandbox: true,
+      // customize the buyer experience
+      checkoutLanguage: 'ja_JP',
+      productType: 'PayOnly',
+      placement: 'Checkout',
+      buttonColor: 'Gold',
+      // configure Create Checkout Session request
+      createCheckoutSessionConfig: {
+        payloadJSON: '{{ .AmazonPayPayload }}', // string generated in step 2
+        signature: '{{ .AmazonPaySignature }}', // signature generated in step 3
+        publicKeyId: '{{ .AmazonPayPublicKeyID }}'
+      }
+    });
+  </script>
+</body>
+
+</html>

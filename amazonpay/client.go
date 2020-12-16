@@ -1,84 +1,77 @@
 package amazonpay
 
 import (
+	"bytes"
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/base64"
-	"encoding/xml"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
-	"sort"
-	"strings"
+	"runtime"
 	"time"
 
-	"github.com/go-playground/form"
+	"github.com/rs/xid"
+
+	"github.com/gotokatsuya/amazon-pay-sdk-go/amazonpay/signing"
 )
 
 const (
-	EndpointHostJP = "mws.amazonservices.jp"
+	SDKVersion = "2.2.1"
 )
 
 const (
-	EndpointPathReal    = "/OffAmazonPayments"
-	EndpointPathSandbox = "/OffAmazonPayments_Sandbox"
+	APIVersion = "v2"
 )
 
-const (
-	Version = "2013-01-01"
+var (
+	RegionMap = map[string]string{
+		"eu": "eu",
+		"de": "eu",
+		"uk": "eu",
+		"us": "na",
+		"na": "na",
+		"jp": "jp",
+	}
+	RegionHostMap = map[string]string{
+		"eu": "pay-api.amazon.eu",
+		"na": "pay-api.amazon.com",
+		"jp": "pay-api.amazon.jp",
+	}
 )
 
 // Client type
 type Client struct {
-	AccessKey        string
-	SecretKey        string
-	SellerID         string
-	SignatureMethod  string
-	SignatureVersion string
-	Version          string
-	EndpointHost     string
-	EndpointPath     string
+	PublicKeyID string
+	PrivateKey  []byte
+	Region      string
+	Sandbox     bool
+	HTTPClient  *http.Client
 
-	endpoint   *url.URL
-	httpClient *http.Client
+	endpoint *url.URL
 }
 
-// ClientOption type
-type ClientOption func(*Client) error
-
 // New returns a new pay client instance.
-func New(accessKey, secretKey, sellerID string, options ...ClientOption) (*Client, error) {
-	if accessKey == "" {
-		return nil, errors.New("missing accessKey")
+func New(publicKeyID string, privateKey []byte, region string, sandbox bool, httpClient *http.Client) (*Client, error) {
+	if publicKeyID == "" {
+		return nil, errors.New("missing publicKeyID")
 	}
-	if secretKey == "" {
-		return nil, errors.New("missing secretKey")
+	if privateKey == nil {
+		return nil, errors.New("missing  privateKey")
 	}
-	if sellerID == "" {
-		return nil, errors.New("missing sellerID")
+	if region == "" {
+		return nil, errors.New("missing region")
 	}
 	c := &Client{
-		AccessKey:        accessKey,
-		SecretKey:        secretKey,
-		SellerID:         sellerID,
-		SignatureMethod:  "HmacSHA256",
-		SignatureVersion: "2",
-		Version:          Version,
-		EndpointHost:     EndpointHostJP,
-		EndpointPath:     EndpointPathReal,
-		httpClient:       http.DefaultClient,
+		PublicKeyID: publicKeyID,
+		PrivateKey:  privateKey,
+		Region:      region,
+		Sandbox:     sandbox,
+		HTTPClient:  httpClient,
 	}
-	for _, option := range options {
-		err := option(c)
-		if err != nil {
-			return nil, err
-		}
-	}
-	endpoint := "https://" + c.EndpointHost + c.EndpointPath + "/" + Version
-	u, err := url.Parse(endpoint)
+	endpointURL := c.createEndpointURL()
+	u, err := url.Parse(endpointURL)
 	if err != nil {
 		return nil, err
 	}
@@ -86,69 +79,68 @@ func New(accessKey, secretKey, sellerID string, options ...ClientOption) (*Clien
 	return c, nil
 }
 
-// WithHTTPClient function
-func WithHTTPClient(c *http.Client) ClientOption {
-	return func(client *Client) error {
-		client.httpClient = c
-		return nil
+func (c *Client) createEndpointURL() string {
+	modePath := "live"
+	if c.Sandbox {
+		modePath = "sandbox"
 	}
-}
-
-// WithEndpointHost function
-func WithEndpointHost(endpointHost string) ClientOption {
-	return func(client *Client) error {
-		client.EndpointHost = endpointHost
-		return nil
-	}
-}
-
-// WithEndpointPath function
-func WithEndpointPath(endpointPath string) ClientOption {
-	return func(client *Client) error {
-		client.EndpointPath = endpointPath
-		return nil
-	}
-}
-
-// WithSandbox function
-func WithSandbox() ClientOption {
-	return WithEndpointPath(EndpointPathSandbox)
+	host := RegionHostMap[RegionMap[c.Region]]
+	return "https://" + host + "/" + modePath + "/"
 }
 
 // NewRequest method
-func (c *Client) NewRequest(action string, body interface{}) (*http.Request, error) {
-	values, err := form.NewEncoder().Encode(body)
+func (c *Client) NewRequest(method, path string, body interface{}) (*http.Request, error) {
+	u, err := c.endpoint.Parse(path)
 	if err != nil {
 		return nil, err
 	}
-	data := NewRequestValues(values)
-	data.Set("AWSAccessKeyId", c.AccessKey)
-	data.Set("Action", action)
-	data.Set("SellerId", c.SellerID)
-	data.Set("SignatureMethod", c.SignatureMethod)
-	data.Set("SignatureVersion", c.SignatureVersion)
-	data.Set("Timestamp", time.Now().UTC().Format("2006-01-02T15:04:05Z"))
-	data.Set("Version", c.Version)
-	data.Set("Signature", c.makeSignature(http.MethodPost, data.RawEncode()))
-	req, err := http.NewRequest(http.MethodPost, c.endpoint.String(), strings.NewReader(data.RawEncode()))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	return req, nil
-}
 
-// https://m.media-amazon.com/images/G/09/AmazonPayments/Signature.pdf
-func (c *Client) makeSignature(method string, requestValues string) string {
-	key := []byte(c.SecretKey)
-	h := hmac.New(sha256.New, key)
-	h.Write([]byte(strings.Join([]string{method, c.EndpointHost, c.EndpointPath + "/" + c.Version, requestValues}, "\n")))
-	return base64.StdEncoding.EncodeToString(h.Sum(nil))
+	var reqBody io.ReadWriter
+	if body != nil {
+		b, err := json.Marshal(body)
+		if err != nil {
+			return nil, err
+		}
+		reqBody = bytes.NewBuffer(b)
+	}
+
+	req, err := http.NewRequest(method, u.String(), reqBody)
+	if err != nil {
+		return nil, err
+	}
+
+	if method == http.MethodPost {
+		req.Header.Set("x-amz-pay-idempotency-key", xid.New().String())
+	}
+	req.Header.Set("x-amz-pay-region", c.Region)
+	req.Header.Set("x-amz-pay-host", RegionHostMap[RegionMap[c.Region]])
+	req.Header.Set("x-amz-pay-date", time.Now().UTC().Format("20060102T150405Z"))
+	req.Header.Set("content-type", "application/json")
+	req.Header.Set("accept", "application/json")
+	req.Header.Set("user-agent", fmt.Sprintf("amazon-pay-api-sdk-go/%s (GO/%s)", SDKVersion, runtime.Version()))
+
+	canonicalRequest, err := signing.CanonicalRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	stringToSign, err := signing.StringToSign(canonicalRequest)
+	if err != nil {
+		return nil, err
+	}
+	signature, err := signing.Sign(c.PrivateKey, stringToSign)
+	if err != nil {
+		return nil, err
+	}
+	signedHeaders := signing.SignedHeaders(req)
+	authValue := signing.AuthHeaderValue(c.PublicKeyID, signedHeaders, signature)
+	req.Header.Set("Authorization", authValue)
+
+	return req, nil
 }
 
 // Do method
 func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*http.Response, error) {
-	resp, err := c.httpClient.Do(req.WithContext(ctx))
+	resp, err := c.HTTPClient.Do(req.WithContext(ctx))
 	if err != nil {
 		select {
 		case <-ctx.Done():
@@ -164,53 +156,10 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*htt
 		if w, ok := v.(io.Writer); ok {
 			io.Copy(w, resp.Body)
 		} else {
-			data, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				return nil, err
-			}
-			switch {
-			case resp.StatusCode == http.StatusOK:
-				if err := xml.Unmarshal(data, v); err != nil {
-					return nil, err
-				}
-			default:
-				var responseErr ResponseError
-				if err := xml.Unmarshal(data, &responseErr); err == nil {
-					return nil, responseErr
-				}
+			if err := json.NewDecoder(resp.Body).Decode(v); err != nil {
+				return resp, err
 			}
 		}
 	}
 	return resp, nil
-}
-
-// -- request values encoder --
-
-type requestValues struct {
-	url.Values
-}
-
-func NewRequestValues(v url.Values) requestValues {
-	return requestValues{v}
-}
-
-func (v requestValues) RawEncode() string {
-	var buf strings.Builder
-	keys := make([]string, 0, len(v.Values))
-	for k := range v.Values {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for _, k := range keys {
-		vs := v.Values[k]
-		for _, v := range vs {
-			if buf.Len() > 0 {
-				buf.WriteByte('&')
-			}
-			buf.WriteString(k)
-			buf.WriteByte('=')
-			buf.WriteString(strings.Replace(url.QueryEscape(v), "+", "%20", -1))
-		}
-	}
-	return buf.String()
 }

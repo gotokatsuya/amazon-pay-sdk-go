@@ -1,0 +1,22 @@
+<html>
+
+<body>
+  <div>Checkout</div>
+  <div>
+    <div>Payment method</div>
+    <div>{{ .PaymentDescriptor }}</div>
+    <button id="changePaymentButton">Change payment method</button>
+  </div>
+  <div>
+    <a href="/approve?amazonCheckoutSessionId={{ .CheckoutSessionID }}">Next</a>
+  </div>
+  <script src="https://static-fe.payments-amazon.com/checkout.js"></script>
+  <script type="text/javascript" charset="utf-8">
+    amazon.Pay.bindChangeAction('#changePaymentButton', {
+      amazonCheckoutSessionId: '{{ .CheckoutSessionID }}',
+      changeAction: 'changePayment'
+    });
+  </script>
+</body>
+
+</html>

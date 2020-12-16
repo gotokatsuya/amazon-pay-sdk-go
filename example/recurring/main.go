@@ -48,7 +48,7 @@ func main() {
 					Value: "12",
 				},
 				Amount: &amazonpay.Price{
-					Amount:       "100",
+					Amount:       "1",
 					CurrencyCode: "JPY",
 				},
 			},
@@ -115,7 +115,7 @@ func main() {
 				PaymentIntent:                 "AuthorizeWithCapture",
 				CanHandlePendingAuthorization: amazonpay.Bool(false),
 				ChargeAmount: &amazonpay.Price{
-					Amount:       "100",
+					Amount:       "1",
 					CurrencyCode: "JPY",
 				},
 			},
@@ -139,7 +139,7 @@ func main() {
 		checkoutSessionID := r.URL.Query().Get("amazonCheckoutSessionId")
 		resp, httpResp, err := amazonpayCli.CompleteCheckoutSession(r.Context(), checkoutSessionID, &amazonpay.CompleteCheckoutSessionRequest{
 			ChargeAmount: &amazonpay.Price{
-				Amount:       "100",
+				Amount:       "1",
 				CurrencyCode: "JPY",
 			},
 		})
@@ -157,6 +157,24 @@ func main() {
 				log.Println(resp.ChargeID)
 				log.Println(resp.ChargePermissionID)
 				chargePermissionID = resp.ChargePermissionID
+
+				// refund "1" yen
+				rResp, httpResp, err := amazonpayCli.CreateRefund(r.Context(), &amazonpay.CreateRefundRequest{
+					ChargeID: resp.ChargeID,
+					RefundAmount: &amazonpay.Price{
+						Amount:       "1",
+						CurrencyCode: "JPY",
+					},
+				})
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+				switch httpResp.StatusCode {
+				case http.StatusOK, http.StatusCreated:
+				default:
+					http.Error(w, rResp.ErrorResponse.ReasonCode+" | "+rResp.ErrorResponse.Message, http.StatusInternalServerError)
+				}
 			case "Canceled":
 			}
 			data := struct{}{}

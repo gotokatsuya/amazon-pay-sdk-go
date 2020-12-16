@@ -7,11 +7,13 @@ import (
 )
 
 type CreateChargeRequest struct {
-	ChargePermissionID            string `json:"chargePermissionId,omitempty"`
-	ChargeAmount                  *Price `json:"chargeAmount,omitempty"`
-	CaptureNow                    *bool  `json:"captureNow,omitempty"`
-	SoftDescriptor                string `json:"softDescriptor,omitempty"`
-	CanHandlePendingAuthorization *bool  `json:"canHandlePendingAuthorization,omitempty"`
+	ChargePermissionID            string            `json:"chargePermissionId,omitempty"`
+	ChargeAmount                  *Price            `json:"chargeAmount,omitempty"`
+	CaptureNow                    *bool             `json:"captureNow,omitempty"`
+	SoftDescriptor                string            `json:"softDescriptor,omitempty"`
+	CanHandlePendingAuthorization *bool             `json:"canHandlePendingAuthorization,omitempty"`
+	MerchantMetadata              *MerchantMetadata `json:"merchantMetadata,omitempty"`
+	ProviderMetadata              *ProviderMetadata `json:"providerMetadata,omitempty"`
 }
 
 type CreateChargeResponse struct {

@@ -41,7 +41,11 @@ type PaymentPreference struct {
 }
 
 type StatusDetails struct {
-	State                string   `json:"state,omitempty"`
+	State string `json:"state,omitempty"`
+	// https://amazonpaycheckoutintegrationguide.s3.amazonaws.com/amazon-pay-api-v2/checkout-session.html#type-statusdetails
+	ReasonCode        string `json:"reasonCode,omitempty"`
+	ReasonDescription string `json:"reasonDescription,omitempty"`
+	// https://amazonpaycheckoutintegrationguide.s3.amazonaws.com/amazon-pay-api-v2/charge-permission.html#type-statusdetails
 	Reasons              []Reason `json:"reasons,omitempty"`
 	LastUpdatedTimestamp string   `json:"lastUpdatedTimestamp,omitempty"`
 }

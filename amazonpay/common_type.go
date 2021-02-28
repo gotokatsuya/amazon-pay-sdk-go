@@ -41,8 +41,12 @@ type PaymentPreference struct {
 }
 
 type StatusDetails struct {
-	State                string `json:"state,omitempty"`
-	ReasonCode           string `json:"reasonCode,omitempty"`
-	ReasonDescription    string `json:"reasonDescription,omitempty"`
-	LastUpdatedTimestamp string `json:"lastUpdatedTimestamp,omitempty"`
+	State                string   `json:"state,omitempty"`
+	Reasons              []Reason `json:"reasons,omitempty"`
+	LastUpdatedTimestamp string   `json:"lastUpdatedTimestamp,omitempty"`
+}
+
+type Reason struct {
+	ReasonCode        string `json:"reasonCode,omitempty"`
+	ReasonDescription string `json:"reasonDescription,omitempty"`
 }

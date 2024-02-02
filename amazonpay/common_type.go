@@ -17,9 +17,12 @@ type ProviderMetadata struct {
 }
 
 type Buyer struct {
-	BuyerID string `json:"buyerId,omitempty"`
-	Name    string `json:"name,omitempty"`
-	Email   string `json:"email,omitempty"`
+	BuyerID         string `json:"buyerId,omitempty"`
+	Name            string `json:"name,omitempty"`
+	Email           string `json:"email,omitempty"`
+	PostalCode      string `json:"postalCode,omitempty"`
+	ShippingAddress AddressDetails
+	PhoneNumber     string `json:"phoneNumber,omitempty"`
 }
 
 type AddressDetails struct {
